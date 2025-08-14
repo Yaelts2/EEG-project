@@ -2,56 +2,65 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 import os
-
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
-from sklearn.preprocessing import StandardScaler
-
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 import xgboost as xgb
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 SEED = 42
 
-# === Class name mapping ===
-label_map = {
-    0: 'a', 1: 'b', 2: 'd', 3: 'e', 4: 'i',
-    5: 'o', 6: 'p', 7: 's', 8: 't', 9: 'u', 10: 'z'
-}
-
 # === Paths ===
 X_CSV = "processed_data/X.csv"
 Y_CSV = "processed_data/y.csv"
+LABELS_FILE = "processed_data/labels.txt"
 
 # === Load data ===
 X = pd.read_csv(X_CSV).values
 y = pd.read_csv(Y_CSV).values.flatten()
 
-# Feature selection: top 50 features by mutual information
-mi = mutual_info_classif(X, y, discrete_features=False, random_state=SEED)
+# Load original phoneme labels
+with open(LABELS_FILE, "r", encoding="utf-8") as f:
+    phoneme_labels = f.read().strip().split(",")
+
+# Map numeric y -> original phoneme strings
+y_phonemes = [phoneme_labels[label] for label in y]
+
+# === Group into vowel / consonant ===
+vowel_set = {"a", "e", "i", "o", "u"}
+y_grouped = ["vowel" if p in vowel_set else "consonant" for p in y_phonemes]
+
+# Encode to integers 0/1
+label_encoder = LabelEncoder()
+y_encoded = label_encoder.fit_transform(y_grouped)
+class_names = label_encoder.classes_
+
+# === Feature selection: top 50 features ===
+mi = mutual_info_classif(X, y_encoded, discrete_features=False, random_state=SEED)
 top_k = 50
 top_idx = np.argsort(mi)[::-1][:top_k]
 X = X[:, top_idx]
 
-# Feature scaling
+# === Feature scaling ===
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
-# Stratified split: one fold for train/test
+# === Stratified split ===
 skf = StratifiedKFold(n_splits=7, shuffle=True, random_state=SEED)
-train_idx, test_idx = next(skf.split(X, y))
+train_idx, test_idx = next(skf.split(X, y_encoded))
 X_train, X_test = X[train_idx], X[test_idx]
-y_train, y_test = y[train_idx], y[test_idx]
+y_train, y_test = y_encoded[train_idx], y_encoded[test_idx]
 
-# Compute class weights
+# === Compute class weights ===
 class_counts = Counter(y_train)
 total = sum(class_counts.values())
 class_weights = {cls: total / count for cls, count in class_counts.items()}
 weights_train = np.array([class_weights[label] for label in y_train])
 
-# Train Random Forest
+# === Train Random Forest ===
 rf = RandomForestClassifier(
     n_estimators=50,
     max_depth=5,
@@ -63,7 +72,7 @@ rf.fit(X_train, y_train)
 rf_pred = rf.predict(X_test)
 rf_acc = accuracy_score(y_test, rf_pred)
 
-# XGBoost training function
+# === XGBoost training function ===
 def train_xgb(X_train, y_train, X_val, y_val, weights_train, params, num_boost_round=200):
     dtrain = xgb.DMatrix(X_train, label=y_train, weight=weights_train)
     dval = xgb.DMatrix(X_val, label=y_val)
@@ -72,13 +81,14 @@ def train_xgb(X_train, y_train, X_val, y_val, weights_train, params, num_boost_r
                       dtrain,
                       num_boost_round=num_boost_round,
                       evals=evals,
-                      early_stopping_rounds=35,
+                      early_stopping_rounds=40,
                       verbose_eval=False)
     return model
 
-# Hyperparameter grid for XGBoost
+# === Hyperparameter grid for XGBoost ===
 param_grid = [
     {'max_depth': 6, 'learning_rate': 0.1},
+    {'max_depth': 8, 'learning_rate': 0.1},
     {'max_depth': 10, 'learning_rate': 0.1},
     {'max_depth': 10, 'learning_rate': 0.05},
     {'max_depth': 15, 'learning_rate': 0.1},
@@ -91,9 +101,8 @@ best_pred = rf_pred
 
 for params in param_grid:
     xgb_params = {
-        'objective': 'multi:softprob',
-        'num_class': len(np.unique(y)),
-        'eval_metric': 'mlogloss',
+        'objective': 'binary:logistic',
+        'eval_metric': 'logloss',
         'seed': SEED,
         'tree_method': 'hist',
         'subsample': 0.8,
@@ -104,7 +113,7 @@ for params in param_grid:
     model = train_xgb(X_train, y_train, X_test, y_test, weights_train, xgb_params)
     dtest = xgb.DMatrix(X_test)
     pred_prob = model.predict(dtest)
-    pred = np.argmax(pred_prob, axis=1)
+    pred = (pred_prob > 0.5).astype(int)
     acc = accuracy_score(y_test, pred)
 
     if acc > best_acc:
@@ -113,12 +122,12 @@ for params in param_grid:
         best_name = f"XGBoost {params}"
         best_pred = pred
 
-# Ensemble prediction if better
+# === Ensemble prediction if better ===
 if best_name != 'RandomForest':
-    rf_probs = rf.predict_proba(X_test)
+    rf_probs = rf.predict_proba(X_test)[:, 1]
     xgb_probs = best_model.predict(xgb.DMatrix(X_test))
     avg_probs = (rf_probs + xgb_probs) / 2
-    ensemble_pred = np.argmax(avg_probs, axis=1)
+    ensemble_pred = (avg_probs > 0.5).astype(int)
     ensemble_acc = accuracy_score(y_test, ensemble_pred)
 
     if ensemble_acc > best_acc:
@@ -126,29 +135,27 @@ if best_name != 'RandomForest':
         best_name = 'Ensemble RF + XGBoost'
         best_pred = ensemble_pred
 
-# === Print results with class names ===
+# === Print results ===
 print(f"\nBest model: {best_name} with accuracy: {best_acc:.4f}")
-target_names = [label_map[i] for i in sorted(label_map.keys())]
-report = classification_report(y_test, best_pred, target_names=target_names)
+report = classification_report(y_test, best_pred, target_names=class_names)
 print("\nClassification Report:")
 print(report)
 
-# Save results
+# === Save results ===
 results_dir = "results"
 os.makedirs(results_dir, exist_ok=True)
-
-with open(os.path.join(results_dir, "classification_report.txt"), "w") as f:
+with open(os.path.join(results_dir, "classification_report_vowel_consonant.txt"), "w", encoding="utf-8") as f:
     f.write(f"Best model: {best_name}\n")
     f.write(f"Accuracy: {best_acc:.4f}\n\n")
     f.write(report)
 
-# Plot and save confusion matrix with class names
-def plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix", save_path=None):
+# === Plot confusion matrix ===
+def plot_confusion_matrix_custom(y_true, y_pred, title="Confusion Matrix", save_path=None):
     cm = confusion_matrix(y_true, y_pred)
-    labels = [label_map[i] for i in sorted(label_map.keys())]
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(6, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=labels, yticklabels=labels)
+                xticklabels=class_names,
+                yticklabels=class_names)
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title(title)
@@ -156,11 +163,11 @@ def plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix", save_path=No
         plt.savefig(save_path)
     plt.show()
 
-plot_confusion_matrix(
+plot_confusion_matrix_custom(
     y_test,
     best_pred,
-    title=f"{best_name} Confusion Matrix",
-    save_path=os.path.join(results_dir, "confusion_matrix.png")
+    title=f"{best_name} Confusion Matrix (Vowel vs Consonant)",
+    save_path=os.path.join(results_dir, "confusion_matrix_vowel_consonant.png")
 )
 
 print(f"\nResults saved in '{results_dir}' folder.")

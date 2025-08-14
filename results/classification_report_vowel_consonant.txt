@@ -1,11 +1,11 @@
-Best model: XGBoost {'max_depth': 15, 'learning_rate': 0.1}
-Accuracy: 0.6692
+Best model: XGBoost {'max_depth': 6, 'learning_rate': 0.1}
+Accuracy: 0.7074
 
               precision    recall  f1-score   support
 
-   consonant       0.68      0.74      0.71       214
-       vowel       0.65      0.58      0.62       179
+   consonant       0.71      0.78      0.74       214
+       vowel       0.70      0.63      0.66       179
 
-    accuracy                           0.67       393
-   macro avg       0.67      0.66      0.66       393
-weighted avg       0.67      0.67      0.67       393
+    accuracy                           0.71       393
+   macro avg       0.71      0.70      0.70       393
+weighted avg       0.71      0.71      0.71       393

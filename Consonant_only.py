@@ -21,6 +21,9 @@ label_map = {
     5: 'o', 6: 'p', 7: 's', 8: 't', 9: 'u', 10: 'z'
 }
 
+# Define consonants
+consonants = {'b','d','p','s','t','z'}
+
 # === Paths ===
 X_CSV = "processed_data/X.csv"
 Y_CSV = "processed_data/y.csv"
@@ -29,8 +32,25 @@ Y_CSV = "processed_data/y.csv"
 X = pd.read_csv(X_CSV).values
 y = pd.read_csv(Y_CSV).values.flatten()
 
+# Map numeric labels to letters
+letters = np.array([label_map[int(lbl)] for lbl in y])
+
+# Filter only consonant samples
+mask = np.isin(letters, list(consonants))
+X = X[mask]
+y = letters[mask]
+
+print(f"Consonant classes in dataset: {set(y)}")
+print(f"Total consonant samples: {len(y)}")
+
+# === Remap consonants to 0..num_classes-1 for XGBoost ===
+consonant_list = sorted(list(consonants))
+letter_to_idx = {l:i for i,l in enumerate(consonant_list)}
+idx_to_letter = {i:l for i,l in enumerate(consonant_list)}
+y_num = np.array([letter_to_idx[l] for l in y])
+
 # Feature selection: top 50 features by mutual information
-mi = mutual_info_classif(X, y, discrete_features=False, random_state=SEED)
+mi = mutual_info_classif(X, y_num, discrete_features=False, random_state=SEED)
 top_k = 50
 top_idx = np.argsort(mi)[::-1][:top_k]
 X = X[:, top_idx]
@@ -41,9 +61,9 @@ X = scaler.fit_transform(X)
 
 # Stratified split: one fold for train/test
 skf = StratifiedKFold(n_splits=7, shuffle=True, random_state=SEED)
-train_idx, test_idx = next(skf.split(X, y))
+train_idx, test_idx = next(skf.split(X, y_num))
 X_train, X_test = X[train_idx], X[test_idx]
-y_train, y_test = y[train_idx], y[test_idx]
+y_train, y_test = y_num[train_idx], y_num[test_idx]
 
 # Compute class weights
 class_counts = Counter(y_train)
@@ -92,7 +112,7 @@ best_pred = rf_pred
 for params in param_grid:
     xgb_params = {
         'objective': 'multi:softprob',
-        'num_class': len(np.unique(y)),
+        'num_class': len(consonant_list),
         'eval_metric': 'mlogloss',
         'seed': SEED,
         'tree_method': 'hist',
@@ -126,10 +146,12 @@ if best_name != 'RandomForest':
         best_name = 'Ensemble RF + XGBoost'
         best_pred = ensemble_pred
 
-# === Print results with class names ===
+# === Print results with consonant letters ===
 print(f"\nBest model: {best_name} with accuracy: {best_acc:.4f}")
-target_names = [label_map[i] for i in sorted(label_map.keys())]
-report = classification_report(y_test, best_pred, target_names=target_names)
+target_names = consonant_list
+report = classification_report([idx_to_letter[i] for i in y_test],
+                               [idx_to_letter[i] for i in best_pred],
+                               target_names=target_names)
 print("\nClassification Report:")
 print(report)
 
@@ -137,15 +159,17 @@ print(report)
 results_dir = "results"
 os.makedirs(results_dir, exist_ok=True)
 
-with open(os.path.join(results_dir, "classification_report.txt"), "w") as f:
+with open(os.path.join(results_dir, "Consonant_classification_report.txt"), "w") as f:
     f.write(f"Best model: {best_name}\n")
     f.write(f"Accuracy: {best_acc:.4f}\n\n")
     f.write(report)
 
-# Plot and save confusion matrix with class names
+# Plot and save confusion matrix with consonant names
 def plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix", save_path=None):
-    cm = confusion_matrix(y_true, y_pred)
-    labels = [label_map[i] for i in sorted(label_map.keys())]
+    labels = consonant_list
+    cm = confusion_matrix([idx_to_letter[i] for i in y_true],
+                          [idx_to_letter[i] for i in y_pred],
+                          labels=labels)
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=labels, yticklabels=labels)
@@ -160,7 +184,7 @@ plot_confusion_matrix(
     y_test,
     best_pred,
     title=f"{best_name} Confusion Matrix",
-    save_path=os.path.join(results_dir, "confusion_matrix.png")
+    save_path=os.path.join(results_dir, "Consonant_only_confusion_matrix.png")
 )
 
 print(f"\nResults saved in '{results_dir}' folder.")

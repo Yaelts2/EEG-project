@@ -9,7 +9,7 @@ from collections import Counter
 from scipy.signal import welch
 
 # === Paths ===
-DATASET_ROOT = Path(r"../ds006104/ds006104")
+DATASET_ROOT = Path(r"../1ds006104")
 SAVE_DIR = Path("processed_data")
 SAVE_DIR.mkdir(exist_ok=True)
 X_CSV = SAVE_DIR / "X.csv"
@@ -64,7 +64,7 @@ def extract_features_combined(eeg, sfreq):
 # === Step 1: Gather all phoneme labels from all subjects to fit LabelEncoder once ===
 print("🔍 Gathering phonemes from all subjects to build LabelEncoder...")
 
-subject_dirs = sorted(DATASET_ROOT.glob("sub-S*"))  # Adjust subject pattern if needed
+subject_dirs = sorted(DATASET_ROOT.glob("sub-S14*"))  # Adjust subject pattern if needed
 all_phonemes = []
 
 for subject_dir in subject_dirs:
