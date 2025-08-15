@@ -27,9 +27,8 @@ Binary Vowel-Consonant Classification: A simplified task resulted in a notable p
   - `Vowel and consonant.py`: Script for predicting binary classification of vowel vs. consonant
   - `Consonant_only.py`: prediction of reduced classes/phonemes with only consonant letters
   - `Preprocess.py`: a script for extracting and preprocessing data from eeg .edf file based on the events.tsv file
-
-- **`results/`**: Final results 
--  `Classificatio_report.txt`: Result of the multi-class classification of 11 phinemes
+ **`results/`**: Final results 
+   `Classificatio_report.txt`: Result of the multi-class classification of 11 phinemes
   - `report_vowel_and_consonat`: classification report for binary classification of vowel vs. consonant.
   - `Confusion_matrix.png`:confusion matrix for multiclass classification of all the eleven phonemes
   - `Confusion_matrics_vowel_and consonant.png`: confusion matrix for the binary classificatioin
