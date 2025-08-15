@@ -13,7 +13,7 @@ Vowels: /i/, /e/, /a/, /u/, /o/
 ## Data Source
 The project uses a publicly available EEG dataset:
 Dataset Name: An open-access EEG dataset for speech decoding: Exploring the role of articulation and coarticulation
-Source: OpenNeuro [ds006104] (https://doi.org/10.18112/openneuro.ds006104.v1.0.1)
+Source: OpenNeuro (https://doi.org/10.18112/openneuro.ds006104.v1.0.1)
 ## Key Findings
 11-Class Classification: Achieved 31.8% accuracy, above the chance level of ~9%.
 
