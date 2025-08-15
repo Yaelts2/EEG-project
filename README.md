@@ -18,3 +18,5 @@ Source: OpenNeuro (https://doi.org/10.18112/openneuro.ds006104.v1.0.1)
 11-Class Classification: Achieved 31.8% accuracy, above the chance level of ~9%.
 
 Binary Vowel-Consonant Classification: A simplified task resulted in a notable performance boost, reaching 70.7% accuracy
+## Project Structure
+This repository is organized to be clear and reproducible:
