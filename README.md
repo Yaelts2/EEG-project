@@ -29,9 +29,9 @@ Binary Vowel-Consonant Classification: A simplified task resulted in a notable p
   - `Preprocess.py`: a script for extracting and preprocessing data from eeg .edf file based on the events.tsv file
  - **`results/`**: Final results 
    - `Classificatio_report.txt`: Result of the multi-class classification of 11 phinemes
-  - `report_vowel_and_consonat`: classification report for binary classification of vowel vs. consonant.
-  - `Confusion_matrix.png`:confusion matrix for multiclass classification of all the eleven phonemes
-  - `Confusion_matrics_vowel_and consonant.png`: confusion matrix for the binary classificatioin
-  - `report_consonant only.txt`: classification report for reduced classes/consonant only
-  - `Confusion matrix_consonant only`: confusion matrix for reduced number of classes prediction
+   -  `report_vowel_and_consonat`: classification report for binary classification of vowel vs. consonant.
+   -  `Confusion_matrix.png`:confusion matrix for multiclass classification of all the eleven phonemes
+   -   `Confusion_matrics_vowel_and consonant.png`: confusion matrix for the binary classificatioin
+   -    `report_consonant only.txt`: classification report for reduced classes/consonant only
+   -    `Confusion matrix_consonant only`: confusion matrix for reduced number of classes prediction
 
