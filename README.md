@@ -22,11 +22,6 @@ Binary Vowel-Consonant Classification: A simplified task resulted in a notable p
 
 - **`Notebook/`**: Jupyter notebooks for analysis and visualization.
   - `analysis.ipynb`: Exploratory analysis of and vizualization of raw and processed data 
-
-  - `Train.py`: Script for predicting multi-class classification of 11 phinemes.
-  - `Vowel and consonant.py`: Script for predicting binary classification of vowel vs. consonant
-  - `Consonant_only.py`: prediction of reduced classes/phonemes with only consonant letters
-  - `Preprocess.py`: a script for extracting and preprocessing data from eeg .edf file based on the events.tsv file
  - **`results/`**: Final results 
    - `Classificatio_report.txt`: Result of the multi-class classification of 11 phinemes
    -  `report_vowel_and_consonat`: classification report for binary classification of vowel vs. consonant.
@@ -35,3 +30,7 @@ Binary Vowel-Consonant Classification: A simplified task resulted in a notable p
    -    `report_consonant only.txt`: classification report for reduced classes/consonant only
    -    `Confusion matrix_consonant only`: confusion matrix for reduced number of classes prediction
 
+  - `Train.py`: Script for predicting multi-class classification of 11 phinemes.
+  - `Vowel and consonant.py`: Script for predicting binary classification of vowel vs. consonant
+  - `Consonant_only.py`: prediction of reduced classes/phonemes with only consonant letters
+  - `Preprocess.py`: a script for extracting and preprocessing data from eeg .edf file based on the events.tsv file
